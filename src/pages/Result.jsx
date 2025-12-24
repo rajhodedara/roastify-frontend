@@ -1,10 +1,5 @@
-import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import html2canvas from "html2canvas";
-
-/* ================= CONFIG ================= */
-
-const BACKEND_URL = "import.meta.env.VITE_BACKEND_URL";
 
 /* ================= ROAST PARSER ================= */
 
@@ -63,25 +58,17 @@ function StatBlock({ title, items, showImage }) {
 
 export default function Result() {
   const [params] = useSearchParams();
-  const roastId = params.get("rid");
+  const encodedData = params.get("data");
 
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  let data = null;
 
-  useEffect(() => {
-    if (!roastId) {
-      setLoading(false);
-      return;
-    }
-
-    fetch(`${BACKEND_URL}/api/roast/${roastId}`)
-      .then(res => res.json())
-      .then(json => {
-        setData(json);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, [roastId]);
+  try {
+    data = encodedData
+      ? JSON.parse(decodeURIComponent(encodedData))
+      : null;
+  } catch {
+    data = null;
+  }
 
   /* ================= DOWNLOAD ROAST IMAGE ================= */
 
@@ -100,17 +87,9 @@ export default function Result() {
     link.click();
   };
 
-  /* ================= STATES ================= */
+  /* ================= ERROR STATE ================= */
 
-  if (loading) {
-    return (
-      <div className="container result-page">
-        <h1>Roasting you… 🔥</h1>
-      </div>
-    );
-  }
-
-  if (!data || data.error) {
+  if (!data) {
     return (
       <div className="container result-page">
         <h1>Something went wrong 😕</h1>
@@ -128,13 +107,13 @@ export default function Result() {
       {/* ================= ROAST CARD ================= */}
       <div className="roast-card-wrapper">
         <div className="roast-card" id="roast-card">
-          {parsedRoast.headline && (
+          {parsedRoast?.headline && (
             <h2 className="roast-headline">
               {parsedRoast.headline}
             </h2>
           )}
 
-          {parsedRoast.bullets.length > 0 && (
+          {parsedRoast?.bullets?.length > 0 && (
             <ul className="roast-bullets">
               {parsedRoast.bullets.map((line, i) => (
                 <li key={i}>
@@ -144,7 +123,7 @@ export default function Result() {
             </ul>
           )}
 
-          {parsedRoast.verdict && (
+          {parsedRoast?.verdict && (
             <p className="roast-verdict">
               {parsedRoast.verdict}
             </p>
