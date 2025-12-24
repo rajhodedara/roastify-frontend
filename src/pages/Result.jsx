@@ -1,5 +1,10 @@
+import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import html2canvas from "html2canvas";
+
+/* ================= CONFIG ================= */
+
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
 /* ================= ROAST PARSER ================= */
 
@@ -23,11 +28,7 @@ function parseRoast(text) {
       l.toLowerCase().startsWith("final verdict")
     ) || "";
 
-  return {
-    headline,
-    bullets,
-    verdict,
-  };
+  return { headline, bullets, verdict };
 }
 
 /* ================= STAT BLOCK ================= */
@@ -58,19 +59,27 @@ function StatBlock({ title, items, showImage }) {
 
 export default function Result() {
   const [params] = useSearchParams();
-  const encodedData = params.get("data");
+  const roastId = params.get("rid");
 
-  let data = null;
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  try {
-    data = encodedData
-      ? JSON.parse(decodeURIComponent(encodedData))
-      : null;
-  } catch {
-    data = null;
-  }
+  useEffect(() => {
+    if (!roastId) {
+      setLoading(false);
+      return;
+    }
 
-  /* ================= DOWNLOAD ROAST IMAGE ================= */
+    fetch(`${BACKEND_URL}/api/roast/${roastId}`)
+      .then(res => res.json())
+      .then(json => {
+        setData(json);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [roastId]);
+
+  /* ================= DOWNLOAD IMAGE ================= */
 
   const downloadRoastImage = async () => {
     const element = document.getElementById("roast-card");
@@ -87,9 +96,17 @@ export default function Result() {
     link.click();
   };
 
-  /* ================= ERROR STATE ================= */
+  /* ================= STATES ================= */
 
-  if (!data) {
+  if (loading) {
+    return (
+      <div className="container result-page">
+        <h1>Roasting you… 🔥</h1>
+      </div>
+    );
+  }
+
+  if (!data || data.error) {
     return (
       <div className="container result-page">
         <h1>Something went wrong 😕</h1>
@@ -136,10 +153,7 @@ export default function Result() {
         </div>
       </div>
 
-      <button
-        className="download-btn"
-        onClick={downloadRoastImage}
-      >
+      <button className="download-btn" onClick={downloadRoastImage}>
         Download Roast 🔥
       </button>
 
